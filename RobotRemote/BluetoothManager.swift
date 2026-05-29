@@ -30,6 +30,8 @@ final class BluetoothManager: NSObject, ObservableObject {
 
     func startScan() {
         guard central.state == .poweredOn else { return }
+        // 已連線／連線中不重新掃描，否則會覆蓋 .connected 狀態（連線並未真的中斷）
+        guard state != .connected, state != .connecting else { return }
         discovered.removeAll()
         state = .scanning
         // 優先用 service UUID 過濾；少數 HC-08 廣播未含 service，

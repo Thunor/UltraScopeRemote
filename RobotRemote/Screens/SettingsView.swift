@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - 設定頁面
 
 struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
     @AppStorage("preview.mode") private var previewMode = false
 
     private let repoURL = URL(string: "https://github.com/robotctust/robot-bluetooth-remote-app-for-ios")!
@@ -64,6 +65,11 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("設定")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") { dismiss() }
+                }
+            }
         }
     }
 
