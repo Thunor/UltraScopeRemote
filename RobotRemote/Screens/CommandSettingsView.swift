@@ -12,24 +12,24 @@ struct CommandSettingsView: View {
     var body: some View {
         Form {
             Section {
-                row("前進", "arrow.up", $cmdUp)
-                row("後退", "arrow.down", $cmdDown)
-                row("左轉", "arrow.left", $cmdLeft)
-                row("右轉", "arrow.right", $cmdRight)
-                row("停止", "stop.fill", $cmdStop)
+                row("Forward", "arrow.up", $cmdUp)
+                row("Backward", "arrow.down", $cmdDown)
+                row("Left", "arrow.left", $cmdLeft)
+                row("Right", "arrow.right", $cmdRight)
+                row("Stop", "stop.fill", $cmdStop)
             } header: {
-                Text("方向指令對應字元")
+                Text("Characters corresponding to directional commands")
             } footer: {
-                Text("按住方向鍵會送出對應字元、放開送出「停止」字元；Arduino 端依字元辨識動作。可輸入 1～8 個字元。")
+                Text("Holding down a directional key sends the corresponding character, while releasing it sends a 'stop' character; the Arduino identifies the action based on the character received. You can input between 1 and 8 characters.")
             }
 
             Section {
-                Button("恢復預設", role: .destructive) {
+                Button("Restore Defaults", role: .destructive) {
                     cmdUp = "F"; cmdDown = "B"; cmdLeft = "L"; cmdRight = "R"; cmdStop = "S"
                 }
             }
         }
-        .navigationTitle("自訂發送指令")
+        .navigationTitle("Custom Send Command")
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -37,7 +37,7 @@ struct CommandSettingsView: View {
         HStack {
             Label(title, systemImage: icon)
             Spacer()
-            TextField("字元", text: text)
+            TextField("Character", text: text)
                 .multilineTextAlignment(.trailing)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.characters)

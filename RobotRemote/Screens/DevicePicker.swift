@@ -12,19 +12,19 @@ struct DevicePicker: View {
             List {
                 if bt.state == .poweredOff {
                     Section {
-                        Label("藍牙未開啟", systemImage: "exclamationmark.triangle")
+                        Label("Bluetooth is not turned on.", systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.secondary)
                     } footer: {
-                        Text("請到「設定」開啟藍牙，並允許本 App 使用藍牙。")
+                        Text("Please go to 'Settings' to turn on Bluetooth and allow this app to use Bluetooth.")
                     }
                 } else {
                     if bt.state == .connected, let name = bt.connectedName {
-                        Section("已連線") {
+                        Section("Connected") {
                             HStack {
                                 Label(name, systemImage: "checkmark.circle.fill")
                                     .foregroundStyle(.green)
                                 Spacer()
-                                Button("中斷", role: .destructive) { bt.disconnect() }
+                                Button("Interrupt", role: .destructive) { bt.disconnect() }
                                     .buttonStyle(.borderless)
                             }
                         }
@@ -33,17 +33,17 @@ struct DevicePicker: View {
                     Section {
                         ForEach(bt.discovered, id: \.identifier) { p in
                             Button { bt.connect(p); dismiss() } label: {
-                                Label(p.name ?? "未命名裝置", systemImage: "cpu")
+                                Label(p.name ?? "Unnamed Device", systemImage: "cpu")
                             }
                         }
                         if bt.discovered.isEmpty {
-                            Label(bt.state == .scanning ? "搜尋中…" : "尚未找到裝置",
+                            Label(bt.state == .scanning ? "Searching..." : "No device found yet",
                                   systemImage: "magnifyingglass")
                                 .foregroundStyle(.secondary)
                         }
                     } header: {
                         HStack {
-                            Text("可用裝置")
+                            Text("Available devices")
                             Spacer()
                             if bt.state == .scanning { ProgressView().controlSize(.small) }
                         }
@@ -51,18 +51,18 @@ struct DevicePicker: View {
 
                     #if targetEnvironment(simulator)
                     Section {
-                        Button("預覽圓盤介面") { previewMode = true; dismiss() }
+                        Button("Preview Disc Interface") { previewMode = true; dismiss() }
                     } footer: {
-                        Text("模擬器無藍牙硬體，此選項僅供預覽介面。")
+                        Text("The emulator lacks Bluetooth hardware; this option is for interface preview purposes only.")
                     }
                     #endif
                 }
             }
-            .navigationTitle("裝置")
+            .navigationTitle("device")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button("Finish") { dismiss() }
                 }
             }
             .onAppear { bt.startScan() }

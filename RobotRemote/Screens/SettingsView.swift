@@ -20,23 +20,23 @@ struct SettingsView: View {
                     NavigationLink {
                         CommandSettingsView()
                     } label: {
-                        Text("自訂發送指令")
+                        Text("Custom Send Command")
                     }
                 } header: {
-                    Text("控制")
+                    Text("Control")
                 } footer: {
-                    Text("自訂每個方向與停止鍵送出的 ASCII 字元。")
+                    Text("Customize the ASCII characters sent for each direction and the stop key.")
                 }
 
                 // ── 測試 ──────────────────────────────────────────────
                 Section {
                     Toggle(isOn: $previewMode) {
-                        Text("預覽模式")
+                        Text("Preview Mode")
                     }
                 } header: {
-                    Text("測試")
+                    Text("Test")
                 } footer: {
-                    Text("預覽模式開啟後，不需連接藍牙即可操作介面，方便在實機上測試搖桿、方向鍵與指令浮層；實際連線時指令仍會正常送出。")
+                    Text("Once preview mode is enabled, you can operate the interface without a Bluetooth connection, making it convenient to test the joystick, directional buttons, and command overlays on the actual device; commands will still be transmitted normally when the device is actually connected.")
                 }
 
                 // ── 開發 ──────────────────────────────────────────────
@@ -44,15 +44,15 @@ struct SettingsView: View {
                     LabeledContent("開發者", value: "John Lin")
                     linkRow("GitHub 儲存庫", url: repoURL)
                 } header: {
-                    Text("開發")
+                    Text("Development")
                 } footer: {
-                    Text("本專案以 MIT 授權開源，歡迎一起貢獻。")
+                    Text("This project is open-source under the MIT License; contributions are welcome.")
                 }
 
                 // ── 版本與版權（底部）────────────────────────────────
                 Section {
                     VStack(spacing: 4) {
-                        Text("版本 \(version)")
+                        Text("Version \(version)")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                         Text("Copyright @ 2026 中臺機器人研究社")
@@ -64,10 +64,10 @@ struct SettingsView: View {
                     .listRowBackground(Color.clear)
                 }
             }
-            .navigationTitle("設定")
+            .navigationTitle("Setting")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") { dismiss() }
+                    Button("Finish") { dismiss() }
                 }
             }
         }
@@ -84,4 +84,8 @@ struct SettingsView: View {
         }
         .tint(.primary)
     }
+}
+
+#Preview {
+    SettingsView()
 }

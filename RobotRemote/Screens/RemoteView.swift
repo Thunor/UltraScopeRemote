@@ -27,17 +27,19 @@ struct RemoteView: View {
     private var mode: ControlMode { ControlMode(rawValue: modeRaw) ?? .joystick }
     private var isConnected: Bool { bt.state == .connected || previewMode }
 
-    /// 高度為 compact 時即橫向（手機橫放、iPad 分割等），改用水平佈局
+    /// When the height is "compact"—such as when a phone is held horizontally or an iPad is in
+    /// split-screen mode—switch to a horizontal layout.
     private var isLandscape: Bool { vSize == .compact }
     private var padSize: CGFloat { isLandscape ? 260 : 300 }
 
-    /// 送出單一指令字串。真的連線時一律送出；未連線且開啟預覽模式時只印出（供測試介面）
+    /// Sends a single command string. It is always sent when actually connected; if not
+    /// connected but preview mode is enabled, it is merely printed (for interface testing).
     private func emit(_ cmd: String) {
         if bt.state == .connected { bt.send(cmd) }
         else if previewMode { print("send: \(cmd)") }
     }
 
-    /// 搖桿向量 → 差速混控 → 左右輪 RPM → "M<L>,<R>\n"（去重避免重複送）
+    /// Joystick vector → Differential mixing → Left/Right wheel RPM → "M<L>,<R>\n" (deduplication to avoid redundant transmission)
     private func drive(_ v: CGVector) {
         let forward = max(-1, min(1, v.dy))
         let turn    = max(-1, min(1, v.dx))
@@ -51,7 +53,7 @@ struct RemoteView: View {
         guard cmd != lastDrive else { return }
         lastDrive = cmd
         if L == 0 && R == 0 {
-            hud = DriveHUD(icon: "stop.fill", label: "停止", sending: false)
+            hud = DriveHUD(icon: "stop.fill", label: "Stop", sending: false)
         } else {
             let deg = atan2(Double(L - R), Double(L + R)) * 180 / .pi
             hud = DriveHUD(icon: "arrow.up", label: "L \(L) · R \(R)",
@@ -62,19 +64,19 @@ struct RemoteView: View {
 
     private func stopDrive() {
         lastDrive = ""
-        hud = DriveHUD(icon: "stop.fill", label: "停止", sending: false)
+        hud = DriveHUD(icon: "stop.fill", label: "Stop", sending: false)
         emit("M0,0\n")
     }
 
     /// 圓盤模式：依送出的字元更新 HUD（對照自訂指令字元）
     private func discTapped(_ cmd: String) {
         emit(cmd)
-        if      cmd == cmdStop  { hud = DriveHUD(icon: "stop.fill",  label: "停止", sending: false) }
-        else if cmd == cmdUp    { hud = DriveHUD(icon: "arrow.up",    label: "前進", sending: true) }
-        else if cmd == cmdDown  { hud = DriveHUD(icon: "arrow.down",  label: "後退", sending: true) }
-        else if cmd == cmdLeft  { hud = DriveHUD(icon: "arrow.left",  label: "左轉", sending: true) }
-        else if cmd == cmdRight { hud = DriveHUD(icon: "arrow.right", label: "右轉", sending: true) }
-        else                    { hud = DriveHUD(icon: "dot.radiowaves.left.and.right", label: "指令 \(cmd)", sending: true) }
+        if      cmd == cmdStop  { hud = DriveHUD(icon: "stop.fill",  label: "Stop", sending: false) }
+        else if cmd == cmdUp    { hud = DriveHUD(icon: "arrow.up",    label: "Forward", sending: true) }
+        else if cmd == cmdDown  { hud = DriveHUD(icon: "arrow.down",  label: "Backward", sending: true) }
+        else if cmd == cmdLeft  { hud = DriveHUD(icon: "arrow.left",  label: "Turn Left", sending: true) }
+        else if cmd == cmdRight { hud = DriveHUD(icon: "arrow.right", label: "Turn Right", sending: true) }
+        else                    { hud = DriveHUD(icon: "dot.radiowaves.left.and.right", label: "Instruction \(cmd)", sending: true) }
     }
 
     /// 圓盤模式：把滑桿轉速同步給 Arduino（設定 F/B/L/R 的執行速度）
@@ -91,7 +93,7 @@ struct RemoteView: View {
                     portraitLayout
                 }
             }
-            .navigationTitle("遙控")
+            .navigationTitle("Remote Control")
             .onChange(of: modeRaw) { _, _ in
                 guard isConnected else { return }
                 stopDrive()
@@ -130,7 +132,7 @@ struct RemoteView: View {
         #endif
     }
 
-    /// 直向：由上而下垂直堆疊
+    /// Vertical orientation: Stacked vertically from top to bottom.
     private var portraitLayout: some View {
         VStack(spacing: 24) {
             HStack {
@@ -153,7 +155,8 @@ struct RemoteView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// 橫向：操控盤靠左、速度區靠右；HUD 浮層置頂（不佔欄位高度、不遮標題）
+    /// Horizontal layout: control panel on the left, speed zone on the right;
+    /// HUD overlay at the top (does not take up bar height or obscure the title).
     private var landscapeLayout: some View {
         HStack(spacing: 24) {
             VStack() {
@@ -170,7 +173,7 @@ struct RemoteView: View {
         .overlay(alignment: .top) { hudBar }
     }
 
-    /// 操控盤：搖桿或方向鍵，依連線狀態啟用
+    /// Control pad: Joystick or directional buttons; enabled based on connection status.
     private var controlPad: some View {
         Group {
             if mode == .joystick {
@@ -185,7 +188,7 @@ struct RemoteView: View {
         .animation(.easeInOut(duration: 0.25), value: isConnected)
     }
 
-    /// HUD 浮層的固定高度容器（連線時才顯示）
+    /// HUD Fixed-height container within the overlay (visible only when connecting)
     private var hudBar: some View {
         Group {
             if isConnected {
@@ -197,7 +200,7 @@ struct RemoteView: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: isConnected)
     }
 
-    /// 動態島風格的指令浮層：即時顯示正在發送的指令。
+    /// Dynamic Island-style command overlay: Instantly displays commands currently being sent.
     private var commandHUD: some View {
         HStack(spacing: 10) {
             Image(systemName: hud.icon)
@@ -222,7 +225,7 @@ struct RemoteView: View {
 
     private var speedControl: some View {
         VStack(spacing: 10) {
-            Label(mode == .joystick ? "轉速上限" : "轉速",
+            Label(mode == .joystick ? "Maximum rotational speed" : "Rotational Speed",
                   systemImage: "gauge.with.dots.needle.50percent")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -238,14 +241,14 @@ struct RemoteView: View {
 
     private var modeMenu: some View {
         Menu {
-            Picker("控制方式", selection: $modeRaw) {
-                Label("搖桿", systemImage: "arcade.stick").tag(ControlMode.joystick.rawValue)
-                Label("方向鍵", systemImage: "circle.grid.cross.fill").tag(ControlMode.disc.rawValue)
+            Picker("Control method", selection: $modeRaw) {
+                Label("joystick", systemImage: "arcade.stick").tag(ControlMode.joystick.rawValue)
+                Label("Directional Keys", systemImage: "circle.grid.cross.fill").tag(ControlMode.disc.rawValue)
             }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: mode == .joystick ? "arcade.stick" : "circle.grid.cross.fill")
-                Text(mode == .joystick ? "搖桿" : "方向鍵")
+                Text(mode == .joystick ? "joystick" : "Directional keys")
                     .fontWeight(.semibold)
                 Image(systemName: "chevron.down")
                     .font(.caption2.weight(.semibold))
@@ -272,7 +275,7 @@ struct RemoteView: View {
         case .connecting:
             HStack(spacing: 6) {
                 ProgressView()
-                Text("連線中…").fontWeight(.semibold)
+                Text("Connecting...").fontWeight(.semibold)
             }
             .font(.subheadline)
         default:
@@ -296,8 +299,8 @@ struct RemoteView: View {
 
     private var connectionLabel: String {
         if let name = bt.connectedName, bt.state == .connected { return name }
-        if previewMode { return "預覽模式" }
-        return "未連線"
+        if previewMode { return "preview mode" }
+        return "Not connected"
     }
 
     private var connectionTint: Color {
@@ -306,3 +309,5 @@ struct RemoteView: View {
         return .red
     }
 }
+
+
