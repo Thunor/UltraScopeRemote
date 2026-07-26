@@ -1,6 +1,7 @@
 import SwiftUI
+import Combine
 
-// MARK: - 圓盤控制器
+// MARK: - Disc Controller
 
 struct ControlPad: View {
     let discSize: CGFloat
@@ -8,18 +9,24 @@ struct ControlPad: View {
 
     @State private var active: Direction?
     @State private var stopPressed = false
+    @State private var isPressing = false
+    @State private var count = 0
+    @State private var timer: AnyCancellable?
 
-    @AppStorage("cmd.up") private var cmdUp = "F"
-    @AppStorage("cmd.down") private var cmdDown = "B"
-    @AppStorage("cmd.left") private var cmdLeft = "L"
-    @AppStorage("cmd.right") private var cmdRight = "R"
-    @AppStorage("cmd.stop") private var cmdStop = "S"
+    @AppStorage("cmd.up") private var cmdNorth = "3"
+    @AppStorage("cmd.down") private var cmdSouth = "4"
+    @AppStorage("cmd.left") private var cmdWest = "1"
+    @AppStorage("cmd.right") private var cmdEast = "2"
+    @AppStorage("cmd.stop") private var cmdStop = "0"
 
     private let innerRatio: CGFloat = 0.46
 
     private func command(for d: Direction) -> String {
         switch d {
-        case .up: cmdUp; case .down: cmdDown; case .left: cmdLeft; case .right: cmdRight
+            case .up: String(cmdNorth);
+            case .down: String(cmdSouth);
+            case .left: String(cmdWest);
+            case .right: String(cmdEast)
         }
     }
 
@@ -29,7 +36,7 @@ struct ControlPad: View {
         let stopSize = discSize * 0.30
 
         ZStack {
-            // 玻璃層（含按下時的著色）
+            // Glass layer (including the tint applied while pressed)
             GlassEffectContainer(spacing: 8) {
                 ZStack {
                     ForEach(Array(Direction.allCases.enumerated()), id: \.offset) { _, d in
@@ -55,10 +62,20 @@ struct ControlPad: View {
                                     }
                                     .onEnded { _ in
                                         active = nil
-                                        send(cmdStop)
                                         UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                                     }
                             )
+                            .onLongPressGesture(minimumDuration: 0.1, pressing: { pressing in
+                                self.isPressing = pressing
+                                if pressing {
+                                    self.startTimer(d: d)
+                                    print("boom")
+                                } else {
+                                    self.stopTimer()
+                                }
+                            }, perform: {
+                                send(command(for: d))
+                            })
                     }
 
                     Color.clear
@@ -73,7 +90,7 @@ struct ControlPad: View {
                                 .onChanged { _ in
                                     if !stopPressed {
                                         stopPressed = true
-                                        send(cmdStop)
+                                        send(String(cmdStop))
                                         UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                                     }
                                 }
@@ -86,9 +103,9 @@ struct ControlPad: View {
                 .frame(width: discSize, height: discSize)
             }
 
-            // 圖示層：永遠在玻璃之上，不被模糊；不攔截觸控。
-            // 用 offset 模擬「從圓盤中心 scaleEffect(0.97)」時圖示的位移量，
-            // 而非對圖示自身做 scaleEffect（那樣錨點不同，會感覺圖示和按鈕分離）。
+            // Icon layer: always above the glass so it isn't blurred; doesn't intercept touches.
+            // Use offset to mimic the icon's displacement under "scaleEffect(0.97) from the disc center",
+            // rather than applying scaleEffect to the icon itself (that uses a different anchor and makes the icon feel detached from the button).
             ZStack {
                 ForEach(Array(Direction.allCases.enumerated()), id: \.offset) { _, d in
                     let angle = CGFloat(d.centerAngle.radians)
@@ -101,7 +118,7 @@ struct ControlPad: View {
                         .position(x: c + cos(angle) * iconR,
                                   y: c + sin(angle) * iconR)
                 }
-                // 停止鍵在圓盤正中心，scaleEffect 錨點即圓心，不需要 offset 修正。
+                // The stop key sits at the exact disc center, so scaleEffect anchors on the center and needs no offset correction.
                 Image(systemName: "stop.fill")
                     .font(.system(size: stopSize * 0.4, weight: .bold))
                     .foregroundStyle(stopPressed ? Color.white : Color.red)
@@ -112,5 +129,20 @@ struct ControlPad: View {
             .allowsHitTesting(false)
         }
         .frame(width: discSize, height: discSize)
+    }
+    
+    private func startTimer(d: Direction) {
+        timer = Timer.publish(every: 0.5, on: .main, in: .common)
+            .autoconnect()
+            .sink { _ in
+                self.count += 1
+                print("repeat: \(d)")
+                send(command(for: d))
+            }
+    }
+
+    private func stopTimer() {
+        timer?.cancel()
+        timer = nil
     }
 }

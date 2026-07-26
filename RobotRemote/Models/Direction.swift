@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - 方向定義
+// MARK: - Direction Definition
 
 enum Direction: CaseIterable {
     case up, down, left, right
@@ -18,7 +18,7 @@ enum Direction: CaseIterable {
         }
     }
 
-    /// SwiftUI 角度：0° 在右側，順時針為正。
+    /// SwiftUI angle: 0° is on the right, clockwise is positive.
     var centerAngle: Angle {
         switch self {
         case .up: .degrees(-90); case .right: .degrees(0)

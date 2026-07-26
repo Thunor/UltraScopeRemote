@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - 根視圖
+// MARK: - Root View
 
 struct ContentView: View {
     @StateObject private var bt = BluetoothManager()

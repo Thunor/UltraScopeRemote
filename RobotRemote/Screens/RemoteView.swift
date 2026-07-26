@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - 遙控頁面
+// MARK: - Remote Control Screen
 
 struct RemoteView: View {
     @ObservedObject var bt: BluetoothManager
@@ -18,11 +18,12 @@ struct RemoteView: View {
     @AppStorage("joystick.maxRPM") private var maxRPM: Double = 50
     private let rpmCeiling: Double = 50
 
-    @AppStorage("cmd.up") private var cmdUp = "F"
-    @AppStorage("cmd.down") private var cmdDown = "B"
-    @AppStorage("cmd.left") private var cmdLeft = "L"
-    @AppStorage("cmd.right") private var cmdRight = "R"
-    @AppStorage("cmd.stop") private var cmdStop = "S"
+    @AppStorage("cmd.up") private var cmdNorth = "3"
+    @AppStorage("cmd.down") private var cmdSouth = "4"
+    @AppStorage("cmd.left") private var cmdWest = "2"
+    @AppStorage("cmd.right") private var cmdEast = "1"
+    @AppStorage("cmd.stop") private var cmdStop = "0"
+    
 
     private var mode: ControlMode { ControlMode(rawValue: modeRaw) ?? .joystick }
     private var isConnected: Bool { bt.state == .connected || previewMode }
@@ -36,7 +37,7 @@ struct RemoteView: View {
     /// connected but preview mode is enabled, it is merely printed (for interface testing).
     private func emit(_ cmd: String) {
         if bt.state == .connected { bt.send(cmd) }
-        else if previewMode { print("send: \(cmd)") }
+        print("send: \(cmd)")
     }
 
     /// Joystick vector → Differential mixing → Left/Right wheel RPM → "M<L>,<R>\n" (deduplication to avoid redundant transmission)
@@ -68,20 +69,15 @@ struct RemoteView: View {
         emit("M0,0\n")
     }
 
-    /// 圓盤模式：依送出的字元更新 HUD（對照自訂指令字元）
+    /// Disc mode: update the HUD based on the sent character (matched against the custom command characters)
     private func discTapped(_ cmd: String) {
         emit(cmd)
-        if      cmd == cmdStop  { hud = DriveHUD(icon: "stop.fill",  label: "Stop", sending: false) }
-        else if cmd == cmdUp    { hud = DriveHUD(icon: "arrow.up",    label: "Forward", sending: true) }
-        else if cmd == cmdDown  { hud = DriveHUD(icon: "arrow.down",  label: "Backward", sending: true) }
-        else if cmd == cmdLeft  { hud = DriveHUD(icon: "arrow.left",  label: "Turn Left", sending: true) }
-        else if cmd == cmdRight { hud = DriveHUD(icon: "arrow.right", label: "Turn Right", sending: true) }
-        else                    { hud = DriveHUD(icon: "dot.radiowaves.left.and.right", label: "Instruction \(cmd)", sending: true) }
-    }
-
-    /// 圓盤模式：把滑桿轉速同步給 Arduino（設定 F/B/L/R 的執行速度）
-    private func sendDiscSpeed() {
-        emit("V\(Int(maxRPM))\n")
+        if      cmd == String(cmdStop)  { hud = DriveHUD(icon: "stop.fill",  label: "Stop", sending: false) }
+        else if cmd == String(cmdNorth) { hud = DriveHUD(icon: "arrow.up",    label: "Forward", sending: true) }
+        else if cmd == String(cmdSouth) { hud = DriveHUD(icon: "arrow.down",  label: "Backward", sending: true) }
+        else if cmd == String(cmdWest)  { hud = DriveHUD(icon: "arrow.left",  label: "Turn Left", sending: true) }
+        else if cmd == String(cmdEast)  { hud = DriveHUD(icon: "arrow.right", label: "Turn Right", sending: true) }
+        else { hud = DriveHUD(icon: "dot.radiowaves.left.and.right", label: "Instruction \(cmd)", sending: true) }
     }
 
     var body: some View {
@@ -93,17 +89,10 @@ struct RemoteView: View {
                     portraitLayout
                 }
             }
-            .navigationTitle("Remote Control")
+            .navigationTitle("Scope Control")
             .onChange(of: modeRaw) { _, _ in
                 guard isConnected else { return }
                 stopDrive()
-                if mode == .disc { sendDiscSpeed() }
-            }
-            .onChange(of: Int(maxRPM)) { _, _ in
-                if isConnected && mode == .disc { sendDiscSpeed() }
-            }
-            .onChange(of: bt.state) { _, newState in
-                if newState == .connected && mode == .disc { sendDiscSpeed() }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { settingsButton }
@@ -115,12 +104,6 @@ struct RemoteView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
-            #if targetEnvironment(simulator)
-            .sheet(isPresented: $showCommandsPreview) {
-                NavigationStack { CommandSettingsView() }
-                    .presentationDetents([.medium, .large])
-            }
-            #endif
         }
         #if targetEnvironment(simulator)
         .onAppear {
@@ -147,8 +130,6 @@ struct RemoteView: View {
 
             controlPad
 
-            speedControl
-
             Spacer()
             Spacer()
         }
@@ -164,9 +145,6 @@ struct RemoteView: View {
                 controlPad
                     .frame(maxWidth: .infinity)
             }
-
-            speedControl
-                .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 20)
         .frame(maxHeight: .infinity)
@@ -221,22 +199,6 @@ struct RemoteView: View {
         .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         .scaleEffect(hud.sending ? 1.04 : 1)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: hud)
-    }
-
-    private var speedControl: some View {
-        VStack(spacing: 10) {
-            Label(mode == .joystick ? "Maximum rotational speed" : "Rotational Speed",
-                  systemImage: "gauge.with.dots.needle.50percent")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            SpeedSlider(value: $maxRPM,
-                        range: 10...rpmCeiling,
-                        axis: isLandscape ? .vertical : .horizontal,
-                        length: isLandscape ? 260 : 300)
-        }
-        .disabled(!isConnected)
-        .opacity(isConnected ? 1 : 0.3)
-        .animation(.easeInOut(duration: 0.25), value: isConnected)
     }
 
     private var modeMenu: some View {
@@ -309,5 +271,4 @@ struct RemoteView: View {
         return .red
     }
 }
-
 

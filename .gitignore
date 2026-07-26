@@ -1,25 +1,25 @@
 # macOS
 .DS_Store
 
-# Xcode — 編譯產物與衍生資料（等同 web 的 node_modules / .next）
+# Xcode — build products and derived data (equivalent to web's node_modules / .next)
 build/
 DerivedData/
 *.xcuserstate
 *.xcuserdatad
 xcuserdata/
 
-# Xcode 個人 / 自動產生設定
+# Xcode personal / auto-generated settings
 *.moved-aside
 *.hmap
 *.ipa
 *.dSYM.zip
 *.dSYM
 
-# Swift Package Manager（目前沒用到，未來加套件時會用到）
+# Swift Package Manager (not used yet; will be needed when packages are added in the future)
 .build/
 .swiftpm/
-# 注意：若日後使用 SPM，Package.resolved 應「保留」進版控（等同 package-lock.json）
+# Note: if SPM is used later, Package.resolved should be "kept" in version control (equivalent to package-lock.json)
 
-# CocoaPods / Carthage（目前沒用到）
+# CocoaPods / Carthage (not used yet)
 Pods/
 Carthage/Build/

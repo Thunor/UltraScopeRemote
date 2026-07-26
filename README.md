@@ -4,10 +4,10 @@
 
 # Robot Remote
 
-**用藍牙遙控你的 Arduino 自走車**
+**Control your Arduino robot car over Bluetooth**
 
-以 SwiftUI 打造的 iOS App，透過藍牙低功耗（BLE）遙控 Arduino 自走車。<br>
-支援類比搖桿與圓盤方向鍵兩種操控模式，並可自訂送出的指令字元。
+An iOS app built with SwiftUI that remotely controls an Arduino robot car via Bluetooth Low Energy (BLE).<br>
+Supports both analog joystick and disc directional-pad control modes, and lets you customize the command characters that are sent.
 
 <p>
   <img src="https://img.shields.io/badge/platform-iOS%2026%2B-000000?logo=apple&logoColor=white" alt="Platform">
@@ -20,40 +20,40 @@
 
 ---
 
-## 功能
+## Features
 
-| 功能 | 說明 |
+| Feature | Description |
 | --- | --- |
-| **搖桿模式** | 類比搖桿，以差速混控即時換算左右輪轉速，拖曳期間固定回報向量。 |
-| **方向鍵模式** | Liquid Glass 風格圓盤，前後左右 + 中央停止鍵。 |
-| **指令浮層 HUD** | 動態島風格，即時顯示正在送出的指令。 |
-| **自訂指令** | 可改寫每個方向與停止鍵送出的 ASCII 字元，對應 Arduino 端的辨識邏輯。 |
-| **預覽模式** | 不需連接硬體即可在實機上測試介面。 |
+| **Joystick mode** | Analog joystick that converts to left/right wheel speeds in real time using differential mixing, reporting the vector at a fixed rate while dragging. |
+| **Directional-pad mode** | A Liquid Glass-style disc with forward/back/left/right plus a central stop key. |
+| **Command HUD overlay** | Dynamic Island-style overlay that shows the command currently being sent in real time. |
+| **Custom commands** | Rewrite the ASCII character sent for each direction and the stop key, matching the recognition logic on the Arduino side. |
+| **Preview mode** | Test the interface on a real device without connecting to hardware. |
 
-## 硬體需求
+## Hardware Requirements
 
-- iOS 裝置
-- Arduino（本專案以 **Arduino Uno R4** 開發）
-- **HC-08** BLE 藍牙模組（與 HM-10 相容）
+- An iOS device
+- An Arduino (this project was developed with an **Arduino Uno R4**)
+- An **HC-08** BLE Bluetooth module (compatible with the HM-10)
 
-| 項目 | 值 |
+| Item | Value |
 | --- | --- |
 | Service UUID | `FFE0` |
 | Characteristic UUID | `FFE1` |
 
-## 通訊協定
+## Communication Protocol
 
-App 透過 BLE 透明序列傳送 ASCII 字串給 Arduino：
+The app sends ASCII strings to the Arduino over a BLE transparent serial link:
 
-| 模式 | 格式 | 範例 | 說明 |
+| Mode | Format | Example | Description |
 | --- | --- | --- | --- |
-| 方向鍵 | 單一字元 | `F` `B` `L` `R` `S` | 前進 / 後退 / 左轉 / 右轉 / 停止（字元可自訂） |
-| 方向鍵 | `V<rpm>\n` | `V50\n` | 設定方向鍵模式的執行轉速 |
-| 搖桿 | `M<L>,<R>\n` | `M50,-20\n` | 左輪、右輪目標 RPM |
+| Directional pad | Single character | `F` `B` `L` `R` `S` | Forward / Backward / Turn left / Turn right / Stop (characters are customizable) |
+| Directional pad | `V<rpm>\n` | `V50\n` | Sets the execution speed for directional-pad mode |
+| Joystick | `M<L>,<R>\n` | `M50,-20\n` | Target RPM for the left and right wheels |
 
-## 建置與執行
+## Build and Run
 
-**環境需求：** Xcode 16+ · iOS 26+（使用了 Liquid Glass 等新 API）
+**Requirements:** Xcode 16+ · iOS 26+ (uses new APIs such as Liquid Glass)
 
 ```bash
 git clone https://github.com/robotctust/robot-bluetooth-remote-app-for-ios.git
@@ -61,36 +61,36 @@ cd robot-bluetooth-remote-app-for-ios
 open RobotRemote.xcodeproj
 ```
 
-在 Xcode 中選擇實體 iOS 裝置後按 <kbd>⌘R</kbd> 執行。
+Select a physical iOS device in Xcode, then press <kbd>⌘R</kbd> to run.
 
 > [!NOTE]
-> 藍牙在模擬器上無法運作，請用實機；或在 App 設定中開啟「預覽模式」測試介面。
+> Bluetooth does not work in the simulator, so use a real device; alternatively, enable "Preview Mode" in the app's settings to test the interface.
 
-## 專案結構
+## Project Structure
 
 ```
 RobotRemote/
-├── RobotRemoteApp.swift        App 進入點
-├── BluetoothManager.swift      CoreBluetooth 連線管理
-├── ContentView.swift           根 TabView
-├── Models/                     資料型別（方向、控制模式、HUD 狀態）
-├── Controls/                   可重用控制元件（搖桿、圓盤、Shape）
-└── Screens/                    各頁面（遙控、設定、裝置選擇）
+├── RobotRemoteApp.swift        App entry point
+├── BluetoothManager.swift      CoreBluetooth connection management
+├── ContentView.swift           Root TabView
+├── Models/                     Data types (direction, control mode, HUD state)
+├── Controls/                   Reusable control components (joystick, disc, Shape)
+└── Screens/                    Individual screens (remote, settings, device picker)
 ```
 
-## 貢獻
+## Contributing
 
-歡迎發 Issue 回報問題或提出想法，也歡迎送 Pull Request：
+Feel free to open an Issue to report problems or share ideas, and Pull Requests are welcome too:
 
-1. Fork 本專案並建立分支（`git checkout -b feature/your-feature`）
-2. 提交變更（`git commit -m 'Add some feature'`）
-3. 推送分支（`git push origin feature/your-feature`）
-4. 開啟 Pull Request
+1. Fork this project and create a branch (`git checkout -b feature/your-feature`)
+2. Commit your changes (`git commit -m 'Add some feature'`)
+3. Push the branch (`git push origin feature/your-feature`)
+4. Open a Pull Request
 
-## 授權
+## License
 
-本專案以 [MIT License](LICENSE) 授權釋出。
+This project is released under the [MIT License](LICENSE).
 
 <div align="center">
-<sub>Copyright © 2026 中臺機器人研究社 · Made with SwiftUI</sub>
+<sub>Copyright © 2026 Central Taiwan Robotics Club · Made with SwiftUI</sub>
 </div>

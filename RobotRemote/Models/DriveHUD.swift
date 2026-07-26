@@ -1,16 +1,16 @@
 import Foundation
 
-// MARK: - 控制模式
+// MARK: - Control Mode
 
 enum ControlMode: String { case joystick, disc }
 
-// MARK: - 指令浮層狀態
+// MARK: - Command Overlay State
 
-/// 動態島風格 HUD 的顯示狀態：目前送出的指令。
+/// Display state for the Dynamic Island-style HUD: the command currently being sent.
 struct DriveHUD: Equatable {
     var icon: String = "stop.fill"
-    var label: String = "待命"
+    var label: String = "Standby"
     var sending: Bool = false
-    var angle: Double = 0      // 箭頭旋轉角（度），搖桿用
+    var angle: Double = 0      // Arrow rotation angle (degrees), used by the joystick
     var rotates: Bool = false
 }

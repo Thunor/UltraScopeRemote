@@ -1,13 +1,13 @@
 import Foundation
 import CoreBluetooth
 
-/// HC-08 (與 HM-10 相容) 的 BLE 透明序列規格。
-private let serviceUUID = CBUUID(string: "FFE0")
-private let charUUID = CBUUID(string: "FFE1")
+/// BLE transparent serial specification for the HC-08 (compatible with the HM-10).
+private let serviceUUID = CBUUID(string: "180A")
+private let charUUID = CBUUID(string: "2A57")
 
 enum ConnectionState: Equatable {
-    case poweredOff       // 藍牙未開啟 / 不可用
-    case idle             // 已就緒，尚未掃描
+    case poweredOff       // Bluetooth is off / unavailable
+    case idle             // Ready, not yet scanning
     case scanning
     case connecting
     case connected
@@ -30,12 +30,12 @@ final class BluetoothManager: NSObject, ObservableObject {
 
     func startScan() {
         guard central.state == .poweredOn else { return }
-        // 已連線／連線中不重新掃描，否則會覆蓋 .connected 狀態（連線並未真的中斷）
+        // Don't rescan while connected/connecting, otherwise it would overwrite the .connected state (the connection hasn't actually dropped)
         guard state != .connected, state != .connecting else { return }
         discovered.removeAll()
         state = .scanning
-        // 優先用 service UUID 過濾；少數 HC-08 廣播未含 service，
-        // 若掃不到可改成 scanForPeripherals(withServices: nil / [serviceUUID]) 全掃後依名稱過濾。
+        // Prefer filtering by service UUID; a few HC-08 modules don't include the service in their advertisement,
+        // so if none are found you can switch to scanForPeripherals(withServices: nil / [serviceUUID]) to scan everything and filter by name.
         central.scanForPeripherals(withServices:  nil, options: nil)
     }
 
@@ -58,7 +58,7 @@ final class BluetoothManager: NSObject, ObservableObject {
         resetConnection()
     }
 
-    /// 送出單一 ASCII 指令字串，例如 "F" / "B" / "L" / "R" / "S"。
+    /// Sends a single ASCII command string, e.g. "F" / "B" / "L" / "R" / "S".
     func send(_ command: String) {
         guard let p = peripheral, let ch = writeCharacteristic else { return }
         let data = Data(command.utf8)
@@ -104,7 +104,11 @@ extension BluetoothManager: CBCentralManagerDelegate {
 
     nonisolated func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         Task { @MainActor in
-            self.connectedName = peripheral.name ?? "HC-08"
+            let deviceName = peripheral.name ?? "Arduino"
+            self.connectedName = deviceName
+            print("Connected to device: \(deviceName) (UUID: \(peripheral.identifier))")
+            // Update state to show we're connected but still discovering services
+            self.state = .connecting
             peripheral.delegate = self
             peripheral.discoverServices([serviceUUID])
         }
@@ -123,14 +127,46 @@ extension BluetoothManager: CBCentralManagerDelegate {
 
 extension BluetoothManager: CBPeripheralDelegate {
     nonisolated func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        for service in peripheral.services ?? [] where service.uuid == serviceUUID {
+        guard error == nil else {
+            Task { @MainActor in
+                print("Failed to discover services: \(error!.localizedDescription)")
+                resetConnection()
+            }
+            return
+        }
+        
+        guard let services = peripheral.services, !services.isEmpty else {
+            Task { @MainActor in
+                print("No services found on peripheral")
+                resetConnection()
+            }
+            return
+        }
+        
+        for service in services where service.uuid == serviceUUID {
             peripheral.discoverCharacteristics([charUUID], for: service)
         }
     }
 
     nonisolated func peripheral(_ peripheral: CBPeripheral,
                                 didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        for ch in service.characteristics ?? [] where ch.uuid == charUUID {
+        guard error == nil else {
+            Task { @MainActor in
+                print("Failed to discover characteristics: \(error!.localizedDescription)")
+                resetConnection()
+            }
+            return
+        }
+        
+        guard let characteristics = service.characteristics, !characteristics.isEmpty else {
+            Task { @MainActor in
+                print("No characteristics found for service")
+                resetConnection()
+            }
+            return
+        }
+        
+        for ch in characteristics where ch.uuid == charUUID {
             Task { @MainActor in
                 self.writeCharacteristic = ch
                 self.state = .connected

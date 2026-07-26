@@ -1,9 +1,9 @@
 import SwiftUI
 
-// MARK: - 搖桿控制器
+// MARK: - Joystick Controller
 
-/// 類比搖桿：拇指鈕跟隨手指、夾限在底盤內，放開自動回中。
-/// 拖曳期間以固定 20Hz 回報正規化向量（數學座標：上為 +y、右為 +x，長度 0–1）。
+/// Analog joystick: the thumb knob follows the finger, is clamped within the base, and auto-recenters on release.
+/// While dragging, it reports a normalized vector at a fixed 20 Hz (math coordinates: up is +y, right is +x, length 0–1).
 struct JoystickPad: View {
     let size: CGFloat
     let onVector: (CGVector) -> Void
@@ -24,7 +24,7 @@ struct JoystickPad: View {
 
     var body: some View {
         ZStack {
-            // 底盤（玻璃層）
+            // Base (glass layer)
             GlassEffectContainer(spacing: 8) {
                 Color.clear
                     .glassEffect(.regular, in: Circle())
@@ -32,12 +32,12 @@ struct JoystickPad: View {
                     .frame(width: size, height: size)
             }
 
-            // 中心十字提示
+            // Center crosshair hint
             Image(systemName: "plus")
                 .font(.system(size: size * 0.10, weight: .light))
                 .foregroundStyle(.secondary.opacity(0.4))
 
-            // 拇指鈕：實心旋鈕，疊在玻璃之上不被模糊
+            // Thumb knob: a solid knob layered above the glass so it isn't blurred
             Circle()
                 .fill(Color.accentColor.gradient)
                 .overlay { Circle().strokeBorder(.white.opacity(0.7), lineWidth: 2) }

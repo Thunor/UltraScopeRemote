@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - 裝置選擇器 Sheet
+// MARK: - Device Picker Sheet
 
 struct DevicePicker: View {
     @ObservedObject var bt: BluetoothManager

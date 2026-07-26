@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct RobotRemoteApp: App {
+struct UltraScopeRemoteApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
