@@ -62,7 +62,7 @@ struct DevicePicker: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Finish") { dismiss() }
+                    Button("Close") { dismiss() }
                 }
             }
             .onAppear { bt.startScan() }

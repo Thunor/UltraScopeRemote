@@ -89,7 +89,8 @@ struct RemoteView: View {
                     portraitLayout
                 }
             }
-            .navigationTitle("Scope Control")
+            .navigationBarTitle("Scope Control")
+            .navigationBarTitleTextColor(Color.red)
             .onChange(of: modeRaw) { _, _ in
                 guard isConnected else { return }
                 stopDrive()
@@ -105,6 +106,7 @@ struct RemoteView: View {
                 SettingsView()
             }
         }
+        .foregroundStyle(.red)
         #if targetEnvironment(simulator)
         .onAppear {
             let args = ProcessInfo.processInfo.arguments
@@ -119,7 +121,7 @@ struct RemoteView: View {
     private var portraitLayout: some View {
         VStack(spacing: 24) {
             HStack {
-                modeMenu
+//                modeMenu
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -133,6 +135,7 @@ struct RemoteView: View {
             Spacer()
             Spacer()
         }
+        .background(Color.black)
         .frame(maxWidth: .infinity)
     }
 
@@ -141,12 +144,13 @@ struct RemoteView: View {
     private var landscapeLayout: some View {
         HStack(spacing: 24) {
             VStack() {
-                modeMenu
+//                modeMenu
                 controlPad
                     .frame(maxWidth: .infinity)
             }
         }
         .padding(.horizontal, 20)
+        .background(Color.black)
         .frame(maxHeight: .infinity)
         .overlay(alignment: .top) { hudBar }
     }
@@ -154,11 +158,11 @@ struct RemoteView: View {
     /// Control pad: Joystick or directional buttons; enabled based on connection status.
     private var controlPad: some View {
         Group {
-            if mode == .joystick {
-                JoystickPad(size: padSize, onVector: drive, onRelease: stopDrive)
-            } else {
+//            if mode == .joystick {
+//                JoystickPad(size: padSize, onVector: drive, onRelease: stopDrive)
+//            } else {
                 ControlPad(discSize: padSize) { cmd in discTapped(cmd) }
-            }
+//            }
         }
         .disabled(!isConnected)
         .allowsHitTesting(isConnected)
@@ -272,3 +276,8 @@ struct RemoteView: View {
     }
 }
 
+#Preview {
+    @Previewable @StateObject var bt = BluetoothManager()
+//    RemoteView(bt: bt)
+    RemoteView(bt: bt)
+}
