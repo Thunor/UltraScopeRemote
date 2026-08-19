@@ -58,6 +58,7 @@ struct DevicePicker: View {
                     #endif
                 }
             }
+            .background(.black)
             .navigationTitle("device")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -13,11 +13,25 @@ struct ControlPad: View {
     @State private var count = 0
     @State private var timer: AnyCancellable?
 
+    // micro steps
     @AppStorage("cmd.up") private var cmdNorth = "3"
     @AppStorage("cmd.down") private var cmdSouth = "4"
     @AppStorage("cmd.left") private var cmdWest = "1"
     @AppStorage("cmd.right") private var cmdEast = "2"
     @AppStorage("cmd.stop") private var cmdStop = "0"
+    
+    // single steps
+    @AppStorage("cmd.single.up") private var cmdSingleNorth = "7"
+    @AppStorage("cmd.single.down") private var cmdSingleSouth = "8"
+    @AppStorage("cmd.single.left") private var cmdSingleWest = "5"
+    @AppStorage("cmd.single.right") private var cmdSingleEast = "6"
+    
+    // 100 micro steps
+    @AppStorage("cmd.100.up") private var cmd100North = "c"
+    @AppStorage("cmd.100.down") private var cmd100South = "d"
+    @AppStorage("cmd.100.left") private var cmd100West = "a"
+    @AppStorage("cmd.100.right") private var cmd100East = "b"
+    
 
     private let innerRatio: CGFloat = 0.46
 
@@ -51,31 +65,20 @@ struct ControlPad: View {
                             .contentShape(shape)
                             .scaleEffect(active == d ? 0.97 : 1)
                             .animation(.spring(response: 0.2, dampingFraction: 0.6), value: active)
-                            .gesture(
-                                DragGesture(minimumDistance: 0)
-                                    .onChanged { _ in
-                                        if active != d {
-                                            active = d
-                                            send(command(for: d))
-                                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                        }
-                                    }
-                                    .onEnded { _ in
-                                        active = nil
-                                        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                                    }
+                            .simultaneousGesture(
+                                LongPressGesture(minimumDuration: 0.5)
+                                    .onEnded({ _ in
+                                        let longPressCmd = convertLongPress(cmd: command(for: d))
+                                        send(longPressCmd)
+                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                    })
                             )
-                            .onLongPressGesture(minimumDuration: 0.1, pressing: { pressing in
-                                self.isPressing = pressing
-                                if pressing {
-                                    self.startTimer(d: d)
-                                    print("boom")
-                                } else {
-                                    self.stopTimer()
-                                }
-                            }, perform: {
-                                send(command(for: d))
-                            })
+                            .highPriorityGesture(
+                                TapGesture()
+                                    .onEnded({ _ in
+                                        send(command(for: d))
+                                    })
+                            )
                     }
 
                     Color.clear
@@ -144,5 +147,15 @@ struct ControlPad: View {
     private func stopTimer() {
         timer?.cancel()
         timer = nil
+    }
+    
+    private func convertLongPress(cmd: String) -> String {
+        switch cmd {
+            case cmdNorth: return cmd100North
+            case cmdSouth: return cmd100South
+            case cmdEast: return cmd100East
+            case cmdWest: return cmd100West
+            default: return cmd
+        }
     }
 }

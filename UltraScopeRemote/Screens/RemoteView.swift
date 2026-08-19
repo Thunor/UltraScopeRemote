@@ -11,6 +11,7 @@ struct RemoteView: View {
     @AppStorage("control.mode") private var modeRaw = ControlMode.joystick.rawValue
     @State private var lastDrive = ""
     @State private var hud = DriveHUD()
+    @State private var trackEnabled: Bool = false
     #if targetEnvironment(simulator)
     @State private var showCommandsPreview = false
     #endif
@@ -23,6 +24,8 @@ struct RemoteView: View {
     @AppStorage("cmd.left") private var cmdWest = "2"
     @AppStorage("cmd.right") private var cmdEast = "1"
     @AppStorage("cmd.stop") private var cmdStop = "0"
+    @AppStorage("cmd.track") private var cmdTrack = "9"
+    @AppStorage("cmd.manual") private var cmdManual = "e"
     
 
     private var mode: ControlMode { ControlMode(rawValue: modeRaw) ?? .joystick }
@@ -73,10 +76,10 @@ struct RemoteView: View {
     private func discTapped(_ cmd: String) {
         emit(cmd)
         if      cmd == String(cmdStop)  { hud = DriveHUD(icon: "stop.fill",  label: "Stop", sending: false) }
-        else if cmd == String(cmdNorth) { hud = DriveHUD(icon: "arrow.up",    label: "Forward", sending: true) }
-        else if cmd == String(cmdSouth) { hud = DriveHUD(icon: "arrow.down",  label: "Backward", sending: true) }
-        else if cmd == String(cmdWest)  { hud = DriveHUD(icon: "arrow.left",  label: "Turn Left", sending: true) }
-        else if cmd == String(cmdEast)  { hud = DriveHUD(icon: "arrow.right", label: "Turn Right", sending: true) }
+        else if cmd == String(cmdNorth) { hud = DriveHUD(icon: "arrow.up",    label: "Turn North", sending: true) }
+        else if cmd == String(cmdSouth) { hud = DriveHUD(icon: "arrow.down",  label: "Turn South", sending: true) }
+        else if cmd == String(cmdWest)  { hud = DriveHUD(icon: "arrow.left",  label: "Turn West", sending: true) }
+        else if cmd == String(cmdEast)  { hud = DriveHUD(icon: "arrow.right", label: "Turn East", sending: true) }
         else { hud = DriveHUD(icon: "dot.radiowaves.left.and.right", label: "Instruction \(cmd)", sending: true) }
     }
 
@@ -121,7 +124,6 @@ struct RemoteView: View {
     private var portraitLayout: some View {
         VStack(spacing: 24) {
             HStack {
-//                modeMenu
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -131,6 +133,16 @@ struct RemoteView: View {
             Spacer()
 
             controlPad
+            
+            Spacer()
+            
+            // gotoCoords
+            gotoCoords
+            
+            Spacer()
+            
+            // track button
+            trackButton
 
             Spacer()
             Spacer()
@@ -144,7 +156,6 @@ struct RemoteView: View {
     private var landscapeLayout: some View {
         HStack(spacing: 24) {
             VStack() {
-//                modeMenu
                 controlPad
                     .frame(maxWidth: .infinity)
             }
@@ -158,16 +169,56 @@ struct RemoteView: View {
     /// Control pad: Joystick or directional buttons; enabled based on connection status.
     private var controlPad: some View {
         Group {
-//            if mode == .joystick {
-//                JoystickPad(size: padSize, onVector: drive, onRelease: stopDrive)
-//            } else {
-                ControlPad(discSize: padSize) { cmd in discTapped(cmd) }
-//            }
+            ControlPad(discSize: padSize) { cmd in discTapped(cmd) }
         }
         .disabled(!isConnected)
         .allowsHitTesting(isConnected)
         .opacity(isConnected ? 1 : 0.3)
         .animation(.easeInOut(duration: 0.25), value: isConnected)
+    }
+    
+    private var gotoCoords: some View {
+        VStack() {
+            Text("GOTO")
+        }
+        .disabled(!isConnected)
+        .allowsHitTesting(isConnected)
+        .opacity(isConnected ? 1 : 0.3)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 18)
+        .background(Capsule().fill(.black))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.12)))
+        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+        .scaleEffect(hud.sending ? 1.04 : 1)
+        .animation(.easeInOut(duration: 0.25), value: isConnected)
+    }
+    
+    private var trackButton: some View {
+        VStack() {
+            Text("Track")
+        }
+        .disabled(!isConnected)
+        .allowsHitTesting(isConnected)
+        .opacity(isConnected ? 1 : 0.3)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 18)
+        .background(Capsule().fill(.black))
+        .overlay(Capsule().strokeBorder(.white.opacity(0.12)))
+        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+        .scaleEffect(hud.sending ? 1.04 : 1)
+        .animation(.easeInOut(duration: 0.25), value: isConnected)
+        .onTapGesture {
+            if trackEnabled {
+                print("goto manual mode")
+                emit(cmdManual)
+                trackEnabled.toggle()
+            } else {
+                print("goto track mode")
+                emit(cmdTrack)
+                trackEnabled.toggle()
+            }
+        }
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 
     /// HUD Fixed-height container within the overlay (visible only when connecting)
@@ -203,30 +254,6 @@ struct RemoteView: View {
         .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         .scaleEffect(hud.sending ? 1.04 : 1)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: hud)
-    }
-
-    private var modeMenu: some View {
-        Menu {
-            Picker("Control method", selection: $modeRaw) {
-                Label("joystick", systemImage: "arcade.stick").tag(ControlMode.joystick.rawValue)
-                Label("Directional Keys", systemImage: "circle.grid.cross.fill").tag(ControlMode.disc.rawValue)
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: mode == .joystick ? "arcade.stick" : "circle.grid.cross.fill")
-                Text(mode == .joystick ? "joystick" : "Directional keys")
-                    .fontWeight(.semibold)
-                Image(systemName: "chevron.down")
-                    .font(.caption2.weight(.semibold))
-            }
-            .font(.headline)
-        }
-        .menuStyle(.button)
-        .buttonStyle(.glass)
-        .buttonBorderShape(.capsule)
-        .disabled(!isConnected)
-        .opacity(isConnected ? 1 : 0.3)
-        .animation(.easeInOut(duration: 0.25), value: isConnected)
     }
 
     private var settingsButton: some View {
@@ -278,6 +305,5 @@ struct RemoteView: View {
 
 #Preview {
     @Previewable @StateObject var bt = BluetoothManager()
-//    RemoteView(bt: bt)
     RemoteView(bt: bt)
 }
