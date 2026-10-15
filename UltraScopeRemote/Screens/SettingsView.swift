@@ -16,6 +16,11 @@ struct SettingsView: View {
                 // ── Development ──────────────────────────────────────────────
                 Section {
                     LabeledContent("Developer", value: "Eric Freitas")
+                        .listRowBackground(Color.red.opacity(0.12))
+                    if let url = URL(string: "https://thunor.github.io") {
+                        linkRow("GitHub Page", url: url)
+                            .listRowBackground(Color.red.opacity(0.12))
+                    }
                 } header: {
                     Text("Development")
                 } footer: {
@@ -37,13 +42,21 @@ struct SettingsView: View {
                     .listRowBackground(Color.clear)
                 }
             }
+            // Hide the default grouped (white/gray) list background for a dark, red-only palette.
+            .scrollContentBackground(.hidden)
+            .background(Color.black)
+            .foregroundStyle(.red)
             .navigationTitle("Setting")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Close") { dismiss() }
+                        .foregroundStyle(.red)
                 }
             }
         }
+        .tint(.red)
+        .presentationBackground(.black)
+        .preferredColorScheme(.dark)
     }
 
     private func linkRow(_ title: String, url: URL) -> some View {

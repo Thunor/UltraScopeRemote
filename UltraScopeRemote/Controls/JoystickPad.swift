@@ -2,6 +2,11 @@ import SwiftUI
 
 // MARK: - Joystick Controller
 
+/// Holds the latest normalized vector so the reporting loop reads live values rather than a captured snapshot.
+private final class VectorBox {
+    var value: CGVector = .zero
+}
+
 /// Analog joystick: the thumb knob follows the finger, is clamped within the base, and auto-recenters on release.
 /// While dragging, it reports a normalized vector at a fixed 20 Hz (math coordinates: up is +y, right is +x, length 0–1).
 struct JoystickPad: View {
@@ -11,16 +16,10 @@ struct JoystickPad: View {
 
     @State private var thumb: CGSize = .zero
     @State private var dragging = false
-
-    private let tick = Timer.publish(every: 0.05, on: .main, in: .common).autoconnect()
+    @State private var latest = VectorBox()
 
     private var thumbDiameter: CGFloat { size * 0.38 }
     private var travel: CGFloat { size / 2 - thumbDiameter / 2 }
-
-    private var vector: CGVector {
-        guard travel > 0 else { return .zero }
-        return CGVector(dx: thumb.width / travel, dy: -thumb.height / travel)
-    }
 
     var body: some View {
         ZStack {
@@ -69,16 +68,26 @@ struct JoystickPad: View {
                         t = CGSize(width: t.width * k, height: t.height * k)
                     }
                     thumb = t
+                    latest.value = travel > 0
+                        ? CGVector(dx: t.width / travel, dy: -t.height / travel)
+                        : .zero
                 }
                 .onEnded { _ in
                     dragging = false
                     thumb = .zero
+                    latest.value = .zero
                     onRelease()
                     UIImpactFeedbackGenerator(style: .soft).impactOccurred()
                 }
         )
-        .onReceive(tick) { _ in
-            if dragging { onVector(vector) }
+        // While dragging, stream the current vector at a fixed 20 Hz so the robot keeps
+        // receiving commands even when the thumb is held still.
+        .task(id: dragging) {
+            guard dragging else { return }
+            while !Task.isCancelled {
+                onVector(latest.value)
+                try? await Task.sleep(for: .milliseconds(50))
+            }
         }
     }
 }

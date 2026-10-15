@@ -50,6 +50,7 @@ The app sends ASCII strings to the Arduino over a BLE transparent serial link:
 | Directional pad | Single character | `F` `B` `L` `R` `S` | Forward / Backward / Turn left / Turn right / Stop (characters are customizable) |
 | Directional pad | `V<rpm>\n` | `V50\n` | Sets the execution speed for directional-pad mode |
 | Joystick | `M<L>,<R>\n` | `M50,-20\n` | Target RPM for the left and right wheels |
+| GOTO | `G<RA>,<Dec>\n` | `G05.9195,+07.4071\n` | Slew to equatorial coordinates of date (JNow): RA in decimal hours (`HH.HHHH`), Dec in signed decimal degrees (`±DD.DDDD`) |
 
 ## Build and Run
 

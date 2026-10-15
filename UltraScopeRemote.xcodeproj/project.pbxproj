@@ -239,6 +239,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "UltraScope Remote";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Bluetooth is required to connect to and control the robot";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used to work out which stars and planets are currently above your horizon.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -273,6 +274,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "UltraScope Remote";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Bluetooth is required to connect to and control the robot";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used to work out which stars and planets are currently above your horizon.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

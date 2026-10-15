@@ -7,6 +7,9 @@ struct DevicePicker: View {
     @Binding var previewMode: Bool
     @Environment(\.dismiss) private var dismiss
 
+    /// Dim red row fill so list cells don't use the system gray.
+    private let rowBackground = Color.red.opacity(0.12)
+
     var body: some View {
         NavigationStack {
             List {
@@ -17,17 +20,19 @@ struct DevicePicker: View {
                     } footer: {
                         Text("Please go to 'Settings' to turn on Bluetooth and allow this app to use Bluetooth.")
                     }
+                    .listRowBackground(rowBackground)
                 } else {
                     if bt.state == .connected, let name = bt.connectedName {
                         Section("Connected") {
                             HStack {
                                 Label(name, systemImage: "checkmark.circle.fill")
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(.red)
                                 Spacer()
                                 Button("Interrupt", role: .destructive) { bt.disconnect() }
                                     .buttonStyle(.borderless)
                             }
                         }
+                        .listRowBackground(rowBackground)
                     }
 
                     Section {
@@ -48,6 +53,7 @@ struct DevicePicker: View {
                             if bt.state == .scanning { ProgressView().controlSize(.small) }
                         }
                     }
+                    .listRowBackground(rowBackground)
 
                     #if targetEnvironment(simulator)
                     Section {
@@ -55,20 +61,28 @@ struct DevicePicker: View {
                     } footer: {
                         Text("The emulator lacks Bluetooth hardware; this option is for interface preview purposes only.")
                     }
+                    .listRowBackground(rowBackground)
                     #endif
                 }
             }
-            .background(.black)
+            // Hide the List's default grouped background, which turns white at the large detent.
+            .scrollContentBackground(.hidden)
+            .background(Color.black)
+            .foregroundStyle(.red)
             .navigationTitle("device")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") { dismiss() }
+                        .foregroundStyle(.red)
                 }
             }
             .onAppear { bt.startScan() }
             .onDisappear { bt.stopScan() }
         }
+        .tint(.red)
+        .presentationBackground(.black)
+        .preferredColorScheme(.dark)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
     }

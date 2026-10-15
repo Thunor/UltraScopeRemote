@@ -7,6 +7,7 @@ struct RemoteView: View {
     @Environment(\.verticalSizeClass) private var vSize
     @State private var showPicker = false
     @State private var showSettings = false
+    @State private var showGoto = false
     @AppStorage("preview.mode") private var previewMode = false
     @AppStorage("control.mode") private var modeRaw = ControlMode.joystick.rawValue
     @State private var lastDrive = ""
@@ -83,6 +84,15 @@ struct RemoteView: View {
         else { hud = DriveHUD(icon: "dot.radiowaves.left.and.right", label: "Instruction \(cmd)", sending: true) }
     }
 
+    /// Sends a GOTO as equatorial coordinates of date: "G<RA hours>,<Dec degrees>\n",
+    /// fixed width, e.g. "G05.9195,+07.4071\n" (18 bytes, fits one BLE packet).
+    private func goto(_ target: SkyPosition) {
+        let eq = target.equatorial
+        let cmd = String(format: "G%07.4f,%+08.4f\n", eq.ra, eq.dec)
+        hud = DriveHUD(icon: "scope", label: "GOTO \(target.object.name)", sending: true)
+        emit(cmd)
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -108,8 +118,14 @@ struct RemoteView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showGoto) {
+                GotoView { target in goto(target) }
+            }
         }
         .foregroundStyle(.red)
+        .tint(.red)
+        // Always dark so sheets and system chrome never flash white at the eyepiece.
+        .preferredColorScheme(.dark)
         #if targetEnvironment(simulator)
         .onAppear {
             let args = ProcessInfo.processInfo.arguments
@@ -191,8 +207,9 @@ struct RemoteView: View {
         .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         .scaleEffect(hud.sending ? 1.04 : 1)
         .animation(.easeInOut(duration: 0.25), value: isConnected)
+        .onTapGesture { showGoto = true }
     }
-    
+
     private var trackButton: some View {
         VStack() {
             Text("Track")
@@ -259,7 +276,9 @@ struct RemoteView: View {
     private var settingsButton: some View {
         Button { showSettings = true } label: {
             Image(systemName: "gearshape")
+                .foregroundStyle(.red)
         }
+        .tint(.red)
     }
 
     @ViewBuilder
@@ -268,9 +287,11 @@ struct RemoteView: View {
         case .connecting:
             HStack(spacing: 6) {
                 ProgressView()
+                    .tint(.red)
                 Text("Connecting...").fontWeight(.semibold)
             }
             .font(.subheadline)
+            .foregroundStyle(Color.red.opacity(0.7))
         default:
             Button { showPicker = true } label: {
                 HStack(spacing: 6) {
@@ -279,6 +300,7 @@ struct RemoteView: View {
                         .fontWeight(.semibold)
                 }
                 .font(.subheadline)
+                .foregroundStyle(connectionTint)
             }
             .tint(connectionTint)
         }
@@ -296,10 +318,11 @@ struct RemoteView: View {
         return "Not connected"
     }
 
+    /// Stays within red shades to preserve night vision; brightness indicates state.
     private var connectionTint: Color {
-        if bt.state == .connected { return .green }
-        if previewMode { return .orange }
-        return .red
+        if bt.state == .connected { return .red }
+        if previewMode { return .red.opacity(0.7) }
+        return .red.opacity(0.45)
     }
 }
 
