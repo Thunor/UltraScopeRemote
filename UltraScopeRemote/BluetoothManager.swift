@@ -3,7 +3,8 @@ import CoreBluetooth
 
 /// BLE transparent serial specification for the HC-08 (compatible with the HM-10).
 private let serviceUUID = CBUUID(string: "180A")
-private let charUUID = CBUUID(string: "2A57")
+private let charUUID = CBUUID(string: "2A57")      // G-code commands (write)
+private let statusUUID = CBUUID(string: "2A3D")    // controller status (notify)
 
 enum ConnectionState: Equatable {
     case poweredOff       // Bluetooth is off / unavailable
@@ -18,6 +19,8 @@ final class BluetoothManager: NSObject, ObservableObject {
     @Published var state: ConnectionState = .poweredOff
     @Published var discovered: [CBPeripheral] = []
     @Published var connectedName: String?
+    /// Direction, mode and position reported by the controller.
+    @Published var scope = ScopeStatus()
 
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
@@ -58,7 +61,7 @@ final class BluetoothManager: NSObject, ObservableObject {
         resetConnection()
     }
 
-    /// Sends a single ASCII command string, e.g. "F" / "B" / "L" / "R" / "S".
+    /// Sends one G-code command, e.g. "G1X1" or "M0" (see `GCode`).
     func send(_ command: String) {
         guard let p = peripheral, let ch = writeCharacteristic else { return }
         let data = Data(command.utf8)
@@ -71,6 +74,7 @@ final class BluetoothManager: NSObject, ObservableObject {
         peripheral = nil
         writeCharacteristic = nil
         connectedName = nil
+        scope = ScopeStatus()
         state = central?.state == .poweredOn ? .idle : .poweredOff
     }
 }
@@ -144,7 +148,7 @@ extension BluetoothManager: CBPeripheralDelegate {
         }
         
         for service in services where service.uuid == serviceUUID {
-            peripheral.discoverCharacteristics([charUUID], for: service)
+            peripheral.discoverCharacteristics([charUUID, statusUUID], for: service)
         }
     }
 
@@ -166,10 +170,34 @@ extension BluetoothManager: CBPeripheralDelegate {
             return
         }
         
+        for ch in characteristics where ch.uuid == statusUUID {
+            peripheral.setNotifyValue(true, for: ch)
+        }
+
         for ch in characteristics where ch.uuid == charUUID {
             Task { @MainActor in
                 self.writeCharacteristic = ch
                 self.state = .connected
+                self.send(GCode.report)
+            }
+        }
+    }
+
+    nonisolated func peripheral(_ peripheral: CBPeripheral,
+                                didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
+        // Once subscribed, ask for a fresh report so the first status isn't missed.
+        guard error == nil, characteristic.uuid == statusUUID, characteristic.isNotifying else { return }
+        Task { @MainActor in self.send(GCode.report) }
+    }
+
+    nonisolated func peripheral(_ peripheral: CBPeripheral,
+                                didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        guard error == nil, characteristic.uuid == statusUUID,
+              let data = characteristic.value,
+              let text = String(data: data, encoding: .utf8) else { return }
+        Task { @MainActor in
+            for line in text.split(whereSeparator: \.isNewline) {
+                self.scope.apply(String(line))
             }
         }
     }

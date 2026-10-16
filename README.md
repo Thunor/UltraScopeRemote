@@ -43,14 +43,26 @@ Supports both analog joystick and disc directional-pad control modes, and lets y
 
 ## Communication Protocol
 
-The app sends ASCII strings to the Arduino over a BLE transparent serial link:
+The app and the UltraScopeController sketch speak a small G-code dialect over BLE service `180A`.
+Each command is one write to characteristic `2A57` (≤ 20 bytes; spaces and newline optional).
 
-| Mode | Format | Example | Description |
-| --- | --- | --- | --- |
-| Directional pad | Single character | `F` `B` `L` `R` `S` | Forward / Backward / Turn left / Turn right / Stop (characters are customizable) |
-| Directional pad | `V<rpm>\n` | `V50\n` | Sets the execution speed for directional-pad mode |
-| Joystick | `M<L>,<R>\n` | `M50,-20\n` | Target RPM for the left and right wheels |
-| GOTO | `G<RA>,<Dec>\n` | `G05.9195,+07.4071\n` | Slew to equatorial coordinates of date (JNow): RA in decimal hours (`HH.HHHH`), Dec in signed decimal degrees (`±DD.DDDD`) |
+| Command | Example | Description |
+| --- | --- | --- |
+| `G0 X±1` / `G0 Y±1` | `G0X-1` | Fast move RA (+ west / − east) or Dec (+ north / − south) until `M0` or a limit switch |
+| `G0 A<ra> D<dec>` | `G0A05.9195D+07.4071` | GOTO equatorial coordinates of date (RA hours, Dec degrees). Needs a sync first; tracks on arrival |
+| `G1 X<n>` / `G1 Y<n>` | `G1X1` | Jog an axis `n` motor steps |
+| `G92 A<ra> D<dec>` | `G92A05.9195D+07.4071` | Sync: the scope is centered on these coordinates |
+| `M0` | | Stop, manual mode |
+| `M100` / `M101` | | Tracking on / off |
+| `M114` | | Report direction and position now |
+
+The controller notifies on characteristic `2A3D` (each message ≤ 20 bytes):
+
+| Message | Example | Description |
+| --- | --- | --- |
+| `D:<dir> M:<mode>` | `D:W M:TRK` | Direction of motion (`N S E W NE NW SE SW`, `-` when still) and mode (`MAN TRK FST GTO`); sent on change |
+| `P:<ra>,<dec>` | `P:05.9195,+07.4071` | Where the scope points, every 2 s once synced (`P:?` before) |
+| `E:<code>` | `E:LIMIT` | Error: `BAD`, `NOSYNC` or `LIMIT` |
 
 ## Build and Run
 

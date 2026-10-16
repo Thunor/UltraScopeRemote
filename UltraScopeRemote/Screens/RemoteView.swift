@@ -20,15 +20,6 @@ struct RemoteView: View {
     @AppStorage("joystick.maxRPM") private var maxRPM: Double = 50
     private let rpmCeiling: Double = 50
 
-    @AppStorage("cmd.up") private var cmdNorth = "3"
-    @AppStorage("cmd.down") private var cmdSouth = "4"
-    @AppStorage("cmd.left") private var cmdWest = "2"
-    @AppStorage("cmd.right") private var cmdEast = "1"
-    @AppStorage("cmd.stop") private var cmdStop = "0"
-    @AppStorage("cmd.track") private var cmdTrack = "9"
-    @AppStorage("cmd.manual") private var cmdManual = "e"
-    
-
     private var mode: ControlMode { ControlMode(rawValue: modeRaw) ?? .joystick }
     private var isConnected: Bool { bt.state == .connected || previewMode }
 
@@ -44,53 +35,36 @@ struct RemoteView: View {
         print("send: \(cmd)")
     }
 
-    /// Joystick vector → Differential mixing → Left/Right wheel RPM → "M<L>,<R>\n" (deduplication to avoid redundant transmission)
-    private func drive(_ v: CGVector) {
-        let forward = max(-1, min(1, v.dy))
-        let turn    = max(-1, min(1, v.dx))
-        var left  = forward + turn
-        var right = forward - turn
-        let m = max(1, abs(left), abs(right))
-        left /= m; right /= m
-        let L = Int((left  * maxRPM).rounded())
-        let R = Int((right * maxRPM).rounded())
-        let cmd = "M\(L),\(R)\n"
-        guard cmd != lastDrive else { return }
-        lastDrive = cmd
-        if L == 0 && R == 0 {
-            hud = DriveHUD(icon: "stop.fill", label: "Stop", sending: false)
-        } else {
-            let deg = atan2(Double(L - R), Double(L + R)) * 180 / .pi
-            hud = DriveHUD(icon: "arrow.up", label: "L \(L) · R \(R)",
-                           sending: true, angle: deg, rotates: true)
-        }
-        emit(cmd)
-    }
-
     private func stopDrive() {
         lastDrive = ""
         hud = DriveHUD(icon: "stop.fill", label: "Stop", sending: false)
-        emit("M0,0\n")
+        emit(GCode.stop)
     }
 
-    /// Disc mode: update the HUD based on the sent character (matched against the custom command characters)
+    /// Disc mode: send the G-code and describe it in the HUD.
     private func discTapped(_ cmd: String) {
         emit(cmd)
-        if      cmd == String(cmdStop)  { hud = DriveHUD(icon: "stop.fill",  label: "Stop", sending: false) }
-        else if cmd == String(cmdNorth) { hud = DriveHUD(icon: "arrow.up",    label: "Turn North", sending: true) }
-        else if cmd == String(cmdSouth) { hud = DriveHUD(icon: "arrow.down",  label: "Turn South", sending: true) }
-        else if cmd == String(cmdWest)  { hud = DriveHUD(icon: "arrow.left",  label: "Turn West", sending: true) }
-        else if cmd == String(cmdEast)  { hud = DriveHUD(icon: "arrow.right", label: "Turn East", sending: true) }
-        else { hud = DriveHUD(icon: "dot.radiowaves.left.and.right", label: "Instruction \(cmd)", sending: true) }
+        if cmd == GCode.stop {
+            hud = DriveHUD(icon: "stop.fill", label: "Stop", sending: false)
+        } else if let d = Direction.allCases.first(where: { GCode.jog($0) == cmd }) {
+            hud = DriveHUD(icon: "arrow.\(d.icon.dropFirst("chevron.".count))", label: "Nudge \(d.compassName)", sending: true)
+        } else if let d = Direction.allCases.first(where: { GCode.fastMove($0) == cmd }) {
+            hud = DriveHUD(icon: "arrow.\(d.icon.dropFirst("chevron.".count))", label: "Fast \(d.compassName)", sending: true)
+        } else {
+            hud = DriveHUD(icon: "dot.radiowaves.left.and.right", label: cmd, sending: true)
+        }
     }
 
-    /// Sends a GOTO as equatorial coordinates of date: "G<RA hours>,<Dec degrees>\n",
-    /// fixed width, e.g. "G05.9195,+07.4071\n" (18 bytes, fits one BLE packet).
+    /// Sends a GOTO as equatorial coordinates of date, e.g. "G0A05.9195D+07.4071".
     private func goto(_ target: SkyPosition) {
-        let eq = target.equatorial
-        let cmd = String(format: "G%07.4f,%+08.4f\n", eq.ra, eq.dec)
         hud = DriveHUD(icon: "scope", label: "GOTO \(target.object.name)", sending: true)
-        emit(cmd)
+        emit(GCode.goto(target.equatorial))
+    }
+
+    /// Tells the controller it is centered on `target` (needed before the first GOTO).
+    private func sync(_ target: SkyPosition) {
+        hud = DriveHUD(icon: "scope", label: "Synced on \(target.object.name)", sending: false)
+        emit(GCode.sync(target.equatorial))
     }
 
     var body: some View {
@@ -108,6 +82,12 @@ struct RemoteView: View {
                 guard isConnected else { return }
                 stopDrive()
             }
+            .onChange(of: bt.scope.mode) { _, mode in
+                trackEnabled = mode == .track
+            }
+            .onChange(of: bt.scope.errorCount) { _, _ in
+                hud = DriveHUD(icon: "exclamationmark.triangle.fill", label: bt.scope.errorMessage, sending: false)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { settingsButton }
                 ToolbarItem(placement: .topBarTrailing) { connectionButton }
@@ -119,7 +99,7 @@ struct RemoteView: View {
                 SettingsView()
             }
             .sheet(isPresented: $showGoto) {
-                GotoView { target in goto(target) }
+                GotoView(onSelect: { goto($0) }, onSync: { sync($0) })
             }
         }
         .foregroundStyle(.red)
@@ -145,6 +125,8 @@ struct RemoteView: View {
             .padding(.horizontal, 20)
 
             hudBar
+
+            scopeStatus
 
             Spacer()
 
@@ -227,15 +209,28 @@ struct RemoteView: View {
         .onTapGesture {
             if trackEnabled {
                 print("goto manual mode")
-                emit(cmdManual)
+                emit(GCode.trackOff)
                 trackEnabled.toggle()
             } else {
                 print("goto track mode")
-                emit(cmdTrack)
+                emit(GCode.trackOn)
                 trackEnabled.toggle()
             }
         }
         .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    /// What the controller reports: direction of motion, mode and pointing position.
+    private var scopeStatus: some View {
+        VStack(spacing: 4) {
+            if bt.state == .connected {
+                Text("\(bt.scope.directionLabel) · \(bt.scope.mode.label)")
+                Text(bt.scope.position?.formatted ?? "Not synced")
+            }
+        }
+        .font(.caption.monospacedDigit())
+        .foregroundStyle(Color.red.opacity(0.8))
+        .frame(height: 36)
     }
 
     /// HUD Fixed-height container within the overlay (visible only when connecting)

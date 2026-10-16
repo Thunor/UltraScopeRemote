@@ -5,6 +5,7 @@ import Combine
 
 struct ControlPad: View {
     let discSize: CGFloat
+    /// Sends a G-code: tap = jog one step, long press = fast move, center = stop.
     let send: (String) -> Void
 
     @State private var active: Direction?
@@ -13,36 +14,7 @@ struct ControlPad: View {
     @State private var count = 0
     @State private var timer: AnyCancellable?
 
-    // micro steps
-    @AppStorage("cmd.up") private var cmdNorth = "3"
-    @AppStorage("cmd.down") private var cmdSouth = "4"
-    @AppStorage("cmd.left") private var cmdWest = "1"
-    @AppStorage("cmd.right") private var cmdEast = "2"
-    @AppStorage("cmd.stop") private var cmdStop = "0"
-    
-    // single steps
-    @AppStorage("cmd.single.up") private var cmdSingleNorth = "7"
-    @AppStorage("cmd.single.down") private var cmdSingleSouth = "8"
-    @AppStorage("cmd.single.left") private var cmdSingleWest = "5"
-    @AppStorage("cmd.single.right") private var cmdSingleEast = "6"
-    
-    // 100 micro steps
-    @AppStorage("cmd.100.up") private var cmd100North = "c"
-    @AppStorage("cmd.100.down") private var cmd100South = "d"
-    @AppStorage("cmd.100.left") private var cmd100West = "a"
-    @AppStorage("cmd.100.right") private var cmd100East = "b"
-    
-
     private let innerRatio: CGFloat = 0.46
-
-    private func command(for d: Direction) -> String {
-        switch d {
-            case .up: String(cmdNorth);
-            case .down: String(cmdSouth);
-            case .left: String(cmdWest);
-            case .right: String(cmdEast)
-        }
-    }
 
     var body: some View {
         let c = discSize / 2
@@ -68,15 +40,14 @@ struct ControlPad: View {
                             .simultaneousGesture(
                                 LongPressGesture(minimumDuration: 0.5)
                                     .onEnded({ _ in
-                                        let longPressCmd = convertLongPress(cmd: command(for: d))
-                                        send(longPressCmd)
+                                        send(GCode.fastMove(d))
                                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                     })
                             )
                             .highPriorityGesture(
                                 TapGesture()
                                     .onEnded({ _ in
-                                        send(command(for: d))
+                                        send(GCode.jog(d))
                                     })
                             )
                     }
@@ -93,7 +64,7 @@ struct ControlPad: View {
                                 .onChanged { _ in
                                     if !stopPressed {
                                         stopPressed = true
-                                        send(String(cmdStop))
+                                        send(GCode.stop)
                                         UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
                                     }
                                 }
@@ -140,22 +111,12 @@ struct ControlPad: View {
             .sink { _ in
                 self.count += 1
                 print("repeat: \(d)")
-                send(command(for: d))
+                send(GCode.jog(d))
             }
     }
 
     private func stopTimer() {
         timer?.cancel()
         timer = nil
-    }
-    
-    private func convertLongPress(cmd: String) -> String {
-        switch cmd {
-            case cmdNorth: return cmd100North
-            case cmdSouth: return cmd100South
-            case cmdEast: return cmd100East
-            case cmdWest: return cmd100West
-            default: return cmd
-        }
     }
 }

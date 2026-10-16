@@ -5,6 +5,8 @@ import SwiftUI
 struct GotoView: View {
     /// Called with the chosen target; the sheet dismisses itself afterwards.
     let onSelect: (SkyPosition) -> Void
+    /// Called when the user syncs on a target they have centered in the eyepiece.
+    var onSync: ((SkyPosition) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var locator = LocationProvider()
@@ -67,8 +69,13 @@ struct GotoView: View {
                 } header: {
                     Text("Brightest Visible Now")
                 } footer: {
-                    if sky.sunAltitude > -6 {
-                        Text("The sky is still bright, so only the brightest objects are listed. Search to see everything.")
+                    VStack(alignment: .leading, spacing: 6) {
+                        if sky.sunAltitude > -6 {
+                            Text("The sky is still bright, so only the brightest objects are listed. Search to see everything.")
+                        }
+                        if onSync != nil {
+                            Text("Before your first GOTO, center a target in the eyepiece, then swipe right on it and tap Sync.")
+                        }
                     }
                 }
             } else {
@@ -118,6 +125,15 @@ struct GotoView: View {
         }
         .disabled(!target.canSlew)
         .opacity(target.canSlew ? 1 : 0.4)
+        .swipeActions(edge: .leading) {
+            if let onSync {
+                Button("Sync") {
+                    onSync(target)
+                    dismiss()
+                }
+                .tint(.red)
+            }
+        }
         .listRowBackground(Color.red.opacity(0.12))
     }
 

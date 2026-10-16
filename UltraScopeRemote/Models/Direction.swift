@@ -5,9 +5,23 @@ import SwiftUI
 enum Direction: CaseIterable {
     case up, down, left, right
 
-    var command: String {
+    /// Controller axis: X is RA, Y is Dec.
+    var axis: String {
         switch self {
-        case .up: "F"; case .down: "B"; case .left: "L"; case .right: "R"
+        case .up, .down: "Y"; case .left, .right: "X"
+        }
+    }
+
+    /// Axis sign: + is west (RA) or north/up (Dec).
+    var sign: Int {
+        switch self {
+        case .up, .left: 1; case .down, .right: -1
+        }
+    }
+
+    var compassName: String {
+        switch self {
+        case .up: "North"; case .down: "South"; case .left: "West"; case .right: "East"
         }
     }
 
